@@ -1,6 +1,6 @@
 [package]
-name = "basis-ffi"
-description = "UniFFI bindings for the basis SDK."
+name = "basis-swift"
+description = "The Rust half of the Basis Swift package: basis bound through UniFFI."
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
@@ -11,7 +11,7 @@ publish = false
 # `lib` for uniffi-bindgen, which reads the metadata out of the compiled
 # library; `staticlib` is what the XCFramework links into an app.
 crate-type = ["lib", "staticlib", "cdylib"]
-name = "basis_ffi"
+name = "basis_swift"
 
 [[bin]]
 name = "uniffi-bindgen"

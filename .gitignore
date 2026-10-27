@@ -1,4 +1,4 @@
-/target
+/rust/target
 /build
 .build/
 .swiftpm/

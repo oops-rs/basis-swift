@@ -1,0 +1,6 @@
+# Names the generated Swift: a `Basis` module over a `BasisFFI` C module, so
+# the binary target and the import a developer writes read as the package does.
+[bindings.swift]
+module_name = "Basis"
+ffi_module_name = "BasisFFI"
+ffi_module_filename = "BasisFFI"
