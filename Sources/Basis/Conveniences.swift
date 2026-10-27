@@ -14,12 +14,16 @@ extension Run {
     /// turn; hop to your own actor before touching UI. `approve` is asked
     /// about each consequential tool call while the turn waits; leaving it out
     /// allows every call, and throwing from it denies.
+    ///
+    /// `onEvent` comes first so an unlabeled trailing closure is the observer
+    /// — Swift 6 binds one to the first closure parameter — and `approve:`
+    /// follows it as a labeled one.
     @discardableResult
     public func send(
         _ prompt: String,
         control: TurnControl? = nil,
-        approve: (@Sendable (ApprovalRequest) async throws -> ApprovalAnswer)? = nil,
-        onEvent: (@Sendable (Event) -> Void)? = nil
+        onEvent: (@Sendable (Event) -> Void)? = nil,
+        approve: (@Sendable (ApprovalRequest) async throws -> ApprovalAnswer)? = nil
     ) async throws -> RunReport {
         try await send(
             prompt: prompt,

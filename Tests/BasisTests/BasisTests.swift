@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import Basis
+import Basis
 
 @Test func eventReadsTheJsonlLine() throws {
     let event = try Event(line: #"{"seq":3,"type":"assistant_delta","text":"hel"}"#)

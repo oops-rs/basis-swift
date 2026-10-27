@@ -36,7 +36,7 @@ Package.swift now points at
   checksum $CHECKSUM
 
 Next:
-  git add Package.swift Sources/Basis/Generated rust/Cargo.toml rust/Cargo.lock
+  git add Package.swift Sources/BasisBindings rust/Cargo.toml rust/Cargo.lock
   git commit -m "chore(release): prepare basis-swift $VERSION"
   git tag $VERSION && git push origin main $VERSION
   gh release create $VERSION $ZIP --title $VERSION

@@ -20,6 +20,12 @@ private func readmeCompiles(repo: URL, key: String, historyDir: String) async th
         request.sideEffectLevel == .localState ? .allow : .deny("this app allows local edits only")
     })
 
+    try await run.send("bump the deps") { event in
+        print(event.type)
+    } approve: { request in
+        request.sideEffectLevel == .localState ? .allow : .deny("this app allows local edits only")
+    }
+
     let control = TurnControl()
     control.stop()
     control.cancel()

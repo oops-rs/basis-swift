@@ -7,14 +7,14 @@
 #   PROFILE=debug scripts/build-xcframework.sh
 #
 # Outputs: build/BasisFFI.xcframework (ignored) and
-# Sources/Basis/Generated/Basis.swift (committed, because a developer adding
-# the package through SwiftPM never runs this script).
+# Sources/BasisBindings/BasisBindings.swift (committed, because a developer
+# adding the package through SwiftPM never runs this script).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUST="$ROOT/rust"
 BUILD="$ROOT/build"
-GENERATED="$ROOT/Sources/Basis/Generated"
+GENERATED="$ROOT/Sources/BasisBindings"
 LIB=libbasis_swift.a
 
 PROFILE="${PROFILE:-release}"
@@ -50,7 +50,7 @@ for platform in $PLATFORMS; do
     done
 done
 
-rm -rf "$BUILD"
+rm -rf "$BUILD" "$GENERATED"
 mkdir -p "$BUILD/headers" "$GENERATED"
 
 # Bindings are read out of a compiled library's metadata; every slice holds
@@ -63,7 +63,7 @@ cargo run --quiet --bin uniffi-bindgen -- generate \
     --language swift \
     --out-dir "$BUILD/swift"
 
-mv "$BUILD/swift/Basis.swift" "$GENERATED/Basis.swift"
+mv "$BUILD/swift/BasisBindings.swift" "$GENERATED/BasisBindings.swift"
 mv "$BUILD/swift/BasisFFI.h" "$BUILD/headers/"
 # An xcframework's headers directory carries one module map under this name,
 # which is how SwiftPM finds the C module the generated Swift imports.

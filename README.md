@@ -8,7 +8,7 @@ Your approver and your event view are ordinary Swift.
 .package(url: "https://github.com/oops-rs/basis-swift", from: "0.1.0")
 ```
 
-Platforms: macOS 13, iOS 16.
+Swift 6.4 or later; macOS 13, iOS 16.
 
 ## Use
 
@@ -45,6 +45,15 @@ try await run.send("bump the deps", approve: { request in
 ```
 
 A denial's reason is what the model reads as the call's result, so say what it should do next.
+With both closures, the observer is the trailing closure and `approve:` follows it:
+
+```swift
+try await run.send("bump the deps") { event in
+    print(event.type)
+} approve: { request in
+    request.sideEffectLevel == .localState ? .allow : .deny("this app allows local edits only")
+}
+```
 
 ### Stopping
 

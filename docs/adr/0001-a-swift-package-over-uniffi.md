@@ -55,12 +55,22 @@ Two ways to reach Swift in process:
 
 7. **Generated code is committed, and the binary ships as a release asset.**
    `scripts/build-xcframework.sh` builds the static libraries, regenerates
-   `Sources/Basis/Generated/Basis.swift` and assembles
+   `Sources/BasisBindings/BasisBindings.swift` and assembles
    `BasisFFI.xcframework`. A developer adding the package never runs it, so
    the Swift it generates is committed. The XCFramework is too large for git;
    `scripts/release.sh` zips it for a GitHub release and points
-   `Package.swift`'s binary target at that zip and its checksum. Hand-written
-   Swift (`Event`, closure conveniences) sits beside the generated file.
+   `Package.swift`'s binary target at that zip and its checksum.
+
+8. **The package is Swift 6.4; only the generated bindings are not in Swift 6
+   mode.** UniFFI 0.32.2's template for async foreign traits hands
+   non-`@Sendable` closures to a `Task`, which Swift 6's data-race checks
+   reject. So the generated file is its own target, `BasisBindings`, built in
+   Swift 5 mode. `Basis` re-exports it (`@_exported import`) and holds the
+   hand-written Swift (`Event`, closure conveniences), which is checked in
+   Swift 6 mode like the tests. A developer imports `Basis` and never names
+   the split. When a UniFFI release generates Swift 6-clean code, the
+   language-mode setting goes. The two targets can stay, since they keep
+   generated and hand-written code apart.
 
 ## Consequences
 
@@ -71,6 +81,9 @@ Two ways to reach Swift in process:
   way it breaks JSONL readers, and the version tells them so.
 - `uniffi` is pinned to an exact version: the committed Swift and the
   compiled scaffolding must come from the same UniFFI.
+- Swift 6 binds an unlabeled trailing closure to the first closure
+  parameter. The closure `send` therefore lists `onEvent` before `approve`,
+  so `send(prompt) { event in … } approve: { … }` reads as written.
 - Working in this repository needs the Rust toolchain and the Apple targets;
   using the package needs neither.
 - `uniffi` is MPL-2.0. Its file-level copyleft does not reach this package's
