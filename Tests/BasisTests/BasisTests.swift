@@ -56,6 +56,56 @@ func aTurnAgainstADeadEndpointComesBack() async throws {
     }
 }
 
+@Test func aHostToolReplacingNoBuiltinFailsTheOpen() async throws {
+    let dir = try temporaryDirectory()
+    await #expect(throws: BasisError.self) {
+        _ = try await Workspace.open(
+            path: dir.path,
+            options: WorkspaceOptions(
+                provider: .openAi, model: "test-model", modelIsResolved: true,
+                baseUrl: "http://127.0.0.1:9/v1", apiKey: "unused", history: .ephemeral, discovery: false
+            ),
+            tools: [EchoTool(name: "no_such_builtin", replacesBuiltin: true)]
+        )
+    }
+}
+
+@Test func aHostToolReplacesTheBuiltinShell() async throws {
+    let dir = try temporaryDirectory()
+    let workspace = try await Workspace.open(
+        path: dir.path,
+        options: WorkspaceOptions(
+            provider: .openAi, model: "test-model", modelIsResolved: true,
+            baseUrl: "http://127.0.0.1:9/v1", apiKey: "unused", history: .ephemeral,
+            discovery: false, toolRoster: ["shell"], fileTools: false
+        ),
+        tools: [EchoTool(name: "shell", replacesBuiltin: true)]
+    )
+    let run = try workspace.prepare(options: ConversationOptions(effort: .high, responsesReplayOnly: true))
+    let saved = await run.conversationOptions()
+    #expect(saved.effort == .high)
+    #expect(saved.responsesReplayOnly)
+}
+
+private final class EchoTool: HostTool {
+    let name: String
+    let replacesBuiltin: Bool
+
+    init(name: String, replacesBuiltin: Bool) {
+        self.name = name
+        self.replacesBuiltin = replacesBuiltin
+    }
+
+    func descriptor() -> HostToolDescriptor {
+        HostToolDescriptor(
+            name: name, description: "Echoes its input.", inputSchemaJson: #"{"type":"object"}"#,
+            sideEffectLevel: .none, replacesBuiltin: replacesBuiltin
+        )
+    }
+
+    func call(call: HostToolCall) async throws -> String { call.inputJson }
+}
+
 private final class Events: @unchecked Sendable {
     private let lock = NSLock()
     private var events: [Event] = []

@@ -71,6 +71,25 @@ before touching UI. Each `Event` is one line of basis's
 [JSONL stream](https://github.com/oops-rs/basis/blob/main/docs/embedding.md): `type` names it,
 and `decode(_:)` reads the fields you need into your own `Decodable`.
 
+### Host tools
+
+A `HostTool` is a tool your app implements. `replacesBuiltin: true` puts it in place of basis's
+own tool of that name, such as `shell`, which basis otherwise refuses to shadow. The turn waits
+for `call`; cancelling the turn stops waiting, and what the call already did stays done.
+
+```swift
+let workspace = try await Workspace.open(
+    path: root.path,
+    options: WorkspaceOptions(
+        provider: .openAi, model: "gpt-5.5", modelIsResolved: true, apiKey: key,
+        systemPrompt: persona, discovery: false, toolRoster: ["shell"], fileTools: false
+    ),
+    tools: [MyShell()]
+)
+let run = try workspace.prepare(options: ConversationOptions(effort: .high, responsesReplayOnly: true))
+try await run.send(prompt, limits: TurnLimits(toolBudget: 64, deadlineSeconds: 300))
+```
+
 ### Resuming
 
 `run.agentId()` names the conversation. `workspace.resume(agentId:)` picks it up later, from the

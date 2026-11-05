@@ -22,6 +22,7 @@ extension Run {
     public func send(
         _ prompt: String,
         control: TurnControl? = nil,
+        limits: TurnLimits? = nil,
         onEvent: (@Sendable (Event) -> Void)? = nil,
         approve: (@Sendable (ApprovalRequest) async throws -> ApprovalAnswer)? = nil
     ) async throws -> RunReport {
@@ -29,7 +30,8 @@ extension Run {
             prompt: prompt,
             observer: onEvent.map(ClosureObserver.init),
             approver: approve.map(ClosureApprover.init),
-            control: control
+            control: control,
+            limits: limits
         )
     }
 }
