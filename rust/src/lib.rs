@@ -29,8 +29,8 @@ pub use error::BasisError;
 pub use events::EventObserver;
 pub use options::{History, Provider, Wire, WorkspaceOptions};
 pub use run::{
-    Bound, ConversationOptions, Effort, ResponsesTransport, Run, RunOutcome, RunReport,
-    TurnControl, TurnLimits, Usage,
+    Bound, ConversationOptions, Effort, ReasoningSummary, ResponsesTransport, Run, RunOutcome,
+    RunReport, TurnControl, TurnLimits, Usage,
 };
 pub use tools::{HostTool, HostToolCall, HostToolDescriptor};
 pub use workspace::Workspace;

@@ -32,6 +32,34 @@ impl From<Effort> for basis::Effort {
     }
 }
 
+/// Provider-generated reasoning summaries, as basis's `ReasoningSummary`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ReasoningSummary {
+    Auto,
+    Concise,
+    Detailed,
+}
+
+impl From<ReasoningSummary> for basis::ReasoningSummary {
+    fn from(summary: ReasoningSummary) -> Self {
+        match summary {
+            ReasoningSummary::Auto => Self::Auto,
+            ReasoningSummary::Concise => Self::Concise,
+            ReasoningSummary::Detailed => Self::Detailed,
+        }
+    }
+}
+
+impl From<basis::ReasoningSummary> for ReasoningSummary {
+    fn from(summary: basis::ReasoningSummary) -> Self {
+        match summary {
+            basis::ReasoningSummary::Auto => Self::Auto,
+            basis::ReasoningSummary::Concise => Self::Concise,
+            basis::ReasoningSummary::Detailed => Self::Detailed,
+        }
+    }
+}
+
 /// How the Responses wire reaches its endpoint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum ResponsesTransport {
@@ -49,6 +77,8 @@ pub struct ConversationOptions {
     #[uniffi(default = None)]
     pub effort: Option<Effort>,
     #[uniffi(default = None)]
+    pub reasoning_summary: Option<ReasoningSummary>,
+    #[uniffi(default = None)]
     pub responses_transport: Option<ResponsesTransport>,
     /// Whether a Responses endpoint may store the response server-side.
     #[uniffi(default = None)]
@@ -62,9 +92,11 @@ pub struct ConversationOptions {
 impl ConversationOptions {
     pub(crate) fn request_options(&self) -> basis::ProviderRequestOptions {
         let mut options = basis::ProviderRequestOptions {
-            reasoning: self.effort.map(|effort| basis::ReasoningOptions {
-                effort: Some(basis::Effort::from(effort).into()),
-                summary: None,
+            reasoning: (self.effort.is_some() || self.reasoning_summary.is_some()).then(|| {
+                basis::ReasoningOptions {
+                    effort: self.effort.map(|effort| basis::Effort::from(effort).into()),
+                    summary: self.reasoning_summary.map(Into::into),
+                }
             }),
             ..Default::default()
         };
@@ -103,6 +135,11 @@ impl ConversationOptions {
         Self {
             session_name: None,
             effort,
+            reasoning_summary: options
+                .reasoning
+                .as_ref()
+                .and_then(|reasoning| reasoning.summary)
+                .map(Into::into),
             responses_transport: Some(match options.responses.transport {
                 basis::runtime::ResponsesTransport::WebSocket => ResponsesTransport::WebSocket,
                 _ => ResponsesTransport::HttpSse,
@@ -164,6 +201,7 @@ impl Run {
     }
 
     /// Sets, or with `None` clears, the reasoning effort later turns ask for.
+    /// Like basis, this compatibility setter clears any configured summary.
     #[uniffi::method(default(effort = None))]
     pub async fn set_effort(&self, effort: Option<Effort>) -> Result<(), BasisError> {
         let mut run = self.inner.lock().await;
@@ -351,6 +389,43 @@ impl<S> From<basis::RunReport<S>> for RunReport {
             outcome,
             stopped_by,
             usage,
+        }
+    }
+}
+
+#[cfg(test)]
+mod reasoning_tests {
+    use super::*;
+
+    #[test]
+    fn summaries_and_effort_round_trip_independently() {
+        for summary in [
+            None,
+            Some(ReasoningSummary::Auto),
+            Some(ReasoningSummary::Concise),
+            Some(ReasoningSummary::Detailed),
+        ] {
+            for effort in [None, Some(Effort::High)] {
+                let options = ConversationOptions {
+                    session_name: None,
+                    effort,
+                    reasoning_summary: summary,
+                    responses_transport: Some(ResponsesTransport::WebSocket),
+                    responses_store: Some(false),
+                    responses_replay_only: true,
+                };
+                let request = options.request_options();
+                assert_eq!(
+                    request.reasoning.is_some(),
+                    effort.is_some() || summary.is_some()
+                );
+                assert_eq!(
+                    request.reasoning.as_ref().and_then(|r| r.summary),
+                    summary.map(Into::into)
+                );
+                let saved = ConversationOptions::saved(&request);
+                assert_eq!(saved, options);
+            }
         }
     }
 }

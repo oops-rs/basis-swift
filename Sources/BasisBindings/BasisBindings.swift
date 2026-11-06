@@ -2479,6 +2479,7 @@ public protocol RunProtocol: AnyObject, Sendable {
     
     /**
      * Sets, or with `None` clears, the reasoning effort later turns ask for.
+     * Like basis, this compatibility setter clears any configured summary.
      */
     func setEffort(effort: Effort?) async throws 
     
@@ -2597,6 +2598,7 @@ open func send(prompt: String, observer: EventObserver?, approver: Approver?, co
     
     /**
      * Sets, or with `None` clears, the reasoning effort later turns ask for.
+     * Like basis, this compatibility setter clears any configured summary.
      */
 open func setEffort(effort: Effort? = nil)async throws   {
     return
@@ -3969,6 +3971,7 @@ public func FfiConverterTypeApprovalRequest_lower(_ value: ApprovalRequest) -> R
 public struct ConversationOptions: Equatable, Hashable {
     public var sessionName: String?
     public var effort: Effort?
+    public var reasoningSummary: ReasoningSummary?
     public var responsesTransport: ResponsesTransport?
     /**
      * Whether a Responses endpoint may store the response server-side.
@@ -3982,7 +3985,7 @@ public struct ConversationOptions: Equatable, Hashable {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(sessionName: String? = nil, effort: Effort? = nil, responsesTransport: ResponsesTransport? = nil, 
+    public init(sessionName: String? = nil, effort: Effort? = nil, reasoningSummary: ReasoningSummary? = nil, responsesTransport: ResponsesTransport? = nil, 
         /**
          * Whether a Responses endpoint may store the response server-side.
          */responsesStore: Bool? = nil, 
@@ -3992,6 +3995,7 @@ public struct ConversationOptions: Equatable, Hashable {
          */responsesReplayOnly: Bool = false) {
         self.sessionName = sessionName
         self.effort = effort
+        self.reasoningSummary = reasoningSummary
         self.responsesTransport = responsesTransport
         self.responsesStore = responsesStore
         self.responsesReplayOnly = responsesReplayOnly
@@ -4015,6 +4019,7 @@ public struct FfiConverterTypeConversationOptions: FfiConverterRustBuffer {
             try ConversationOptions(
                 sessionName: FfiConverterOptionString.read(from: &buf), 
                 effort: FfiConverterOptionTypeEffort.read(from: &buf), 
+                reasoningSummary: FfiConverterOptionTypeReasoningSummary.read(from: &buf), 
                 responsesTransport: FfiConverterOptionTypeResponsesTransport.read(from: &buf), 
                 responsesStore: FfiConverterOptionBool.read(from: &buf), 
                 responsesReplayOnly: FfiConverterBool.read(from: &buf)
@@ -4024,6 +4029,7 @@ public struct FfiConverterTypeConversationOptions: FfiConverterRustBuffer {
     public static func write(_ value: ConversationOptions, into buf: inout [UInt8]) {
         FfiConverterOptionString.write(value.sessionName, into: &buf)
         FfiConverterOptionTypeEffort.write(value.effort, into: &buf)
+        FfiConverterOptionTypeReasoningSummary.write(value.reasoningSummary, into: &buf)
         FfiConverterOptionTypeResponsesTransport.write(value.responsesTransport, into: &buf)
         FfiConverterOptionBool.write(value.responsesStore, into: &buf)
         FfiConverterBool.write(value.responsesReplayOnly, into: &buf)
@@ -5692,6 +5698,82 @@ public func FfiConverterTypeProvider_lower(_ value: Provider) -> RustBuffer {
 
 
 /**
+ * Provider-generated reasoning summaries, as basis's `ReasoningSummary`.
+ */
+
+public enum ReasoningSummary: Equatable, Hashable {
+    
+    case auto
+    case concise
+    case detailed
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ReasoningSummary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReasoningSummary: FfiConverterRustBuffer {
+    typealias SwiftType = ReasoningSummary
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReasoningSummary {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .auto
+        
+        case 2: return .concise
+        
+        case 3: return .detailed
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ReasoningSummary, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .auto:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .concise:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .detailed:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReasoningSummary_lift(_ buf: RustBuffer) throws -> ReasoningSummary {
+    return try FfiConverterTypeReasoningSummary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReasoningSummary_lower(_ value: ReasoningSummary) -> RustBuffer {
+    return FfiConverterTypeReasoningSummary.lower(value)
+}
+
+
+
+/**
  * How the Responses wire reaches its endpoint.
  */
 
@@ -6345,6 +6427,30 @@ fileprivate struct FfiConverterOptionTypeProvider: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeReasoningSummary: FfiConverterRustBuffer {
+    typealias SwiftType = ReasoningSummary?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeReasoningSummary.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeReasoningSummary.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeResponsesTransport: FfiConverterRustBuffer {
     typealias SwiftType = ResponsesTransport?
 
@@ -6821,7 +6927,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_basis_swift_checksum_method_run_send() != 30048) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_basis_swift_checksum_method_run_set_effort() != 33587) {
+    if (uniffi_basis_swift_checksum_method_run_set_effort() != 13421) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_basis_swift_checksum_method_turncontrol_cancel() != 45956) {

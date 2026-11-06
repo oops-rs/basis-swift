@@ -81,9 +81,10 @@ func aTurnAgainstADeadEndpointComesBack() async throws {
         ),
         tools: [EchoTool(name: "shell", replacesBuiltin: true)]
     )
-    let run = try workspace.prepare(options: ConversationOptions(effort: .high, responsesReplayOnly: true))
+    let run = try workspace.prepare(options: ConversationOptions(effort: .high, reasoningSummary: .auto, responsesReplayOnly: true))
     let saved = await run.conversationOptions()
     #expect(saved.effort == .high)
+    #expect(saved.reasoningSummary == .auto)
     #expect(saved.responsesReplayOnly)
 }
 
