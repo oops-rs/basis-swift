@@ -119,7 +119,7 @@ private final class Events: @unchecked Sendable {
     }
 }
 
-private func temporaryDirectory() throws -> URL {
+func temporaryDirectory() throws -> URL {
     let dir = FileManager.default.temporaryDirectory
         .appendingPathComponent("basis-swift-tests-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

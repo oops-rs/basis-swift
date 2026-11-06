@@ -9,6 +9,7 @@
 use std::future::Future;
 use std::sync::LazyLock;
 
+mod a2a;
 mod approval;
 mod error;
 mod events;
@@ -17,6 +18,12 @@ mod run;
 mod tools;
 mod workspace;
 
+pub use a2a::{
+    A2aArtifact, A2aAuthenticator, A2aHeader, A2aHostError, A2aHostedReply, A2aHostedStanding,
+    A2aHostedStart, A2aPart, A2aPartContent, A2aPrincipal, A2aProgressNote, A2aRefusal,
+    A2aRequestHead, A2aSecurity, A2aSecurityScheme, A2aServeOptions, A2aServer, A2aSkill,
+    A2aTaskHost,
+};
 pub use approval::{ApprovalAnswer, ApprovalDecision, ApprovalRequest, Approver, SideEffectLevel};
 pub use error::BasisError;
 pub use events::EventObserver;

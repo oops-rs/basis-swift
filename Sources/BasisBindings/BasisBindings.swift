@@ -471,6 +471,22 @@ private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -569,6 +585,1119 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeBytes(&buf, value.utf8)
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
+
+
+
+/**
+ * Turns a request's head into the principal it acts as (basis ADR-0036).
+ */
+public protocol A2aAuthenticator: AnyObject, Sendable {
+    
+    /**
+     * Called before the body is read; bound any waiting yourself.
+     */
+    func authenticate(head: A2aRequestHead) async throws  -> A2aPrincipal
+    
+    /**
+     * The scheme callers must present, under `scheme_name`; read once.
+     */
+    func security()  -> A2aSecurity
+    
+}
+/**
+ * Turns a request's head into the principal it acts as (basis ADR-0036).
+ */
+open class A2aAuthenticatorImpl: A2aAuthenticator, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_basis_swift_fn_clone_a2aauthenticator(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_basis_swift_fn_free_a2aauthenticator(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Called before the body is read; bound any waiting yourself.
+     */
+open func authenticate(head: A2aRequestHead)async throws  -> A2aPrincipal  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2aauthenticator_authenticate(
+                        self.uniffiCloneHandle(),FfiConverterTypeA2aRequestHead_lower(head)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_rust_buffer,
+            completeFunc: ffi_basis_swift_rust_future_complete_rust_buffer,
+            freeFunc: ffi_basis_swift_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeA2aPrincipal_lift,
+            errorHandler: FfiConverterTypeA2aRefusal_lift
+        )
+}
+    
+    /**
+     * The scheme callers must present, under `scheme_name`; read once.
+     */
+open func security() -> A2aSecurity  {
+    return try!  FfiConverterTypeA2aSecurity_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_basis_swift_fn_method_a2aauthenticator_security(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceA2aAuthenticator {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceA2aAuthenticator = UniffiVTableCallbackInterfaceA2aAuthenticator(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeA2aAuthenticator.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface A2aAuthenticator: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeA2aAuthenticator.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface A2aAuthenticator: handle missing in uniffiClone")
+            }
+        },
+        authenticate: { (
+            uniffiHandle: UInt64,
+            head: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> A2aPrincipal in
+                guard let uniffiObj = try? FfiConverterTypeA2aAuthenticator.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.authenticate(
+                     head: try FfiConverterTypeA2aRequestHead_lift(head)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: A2aPrincipal) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterTypeA2aPrincipal_lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aRefusal_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        security: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> A2aSecurity in
+                guard let uniffiObj = try? FfiConverterTypeA2aAuthenticator.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.security(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeA2aSecurity_lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceA2aAuthenticator> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceA2aAuthenticator>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitA2aAuthenticator() {
+    uniffi_basis_swift_fn_init_callback_vtable_a2aauthenticator(UniffiCallbackInterfaceA2aAuthenticator.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aAuthenticator: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<A2aAuthenticator>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = A2aAuthenticator
+
+    public static func lift(_ handle: UInt64) throws -> A2aAuthenticator {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return A2aAuthenticatorImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: A2aAuthenticator) -> UInt64 {
+         if let rustImpl = value as? A2aAuthenticatorImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aAuthenticator {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: A2aAuthenticator, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aAuthenticator_lift(_ handle: UInt64) throws -> A2aAuthenticator {
+    return try FfiConverterTypeA2aAuthenticator.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aAuthenticator_lower(_ value: A2aAuthenticator) -> UInt64 {
+    return FfiConverterTypeA2aAuthenticator.lower(value)
+}
+
+
+
+
+
+
+/**
+ * An A2A server, serving until [`shutdown`](Self::shutdown).
+ */
+public protocol A2aServerProtocol: AnyObject, Sendable {
+    
+    /**
+     * The JSON-RPC endpoint the card advertises.
+     */
+    func endpoint()  -> String
+    
+    /**
+     * The port actually bound.
+     */
+    func port()  -> UInt16
+    
+    /**
+     * Stops accepting, lets in-flight requests finish, and leaves every
+     * unsettled task to be awaited again by the next server.
+     */
+    func shutdown() async 
+    
+}
+/**
+ * An A2A server, serving until [`shutdown`](Self::shutdown).
+ */
+open class A2aServer: A2aServerProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_basis_swift_fn_clone_a2aserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_basis_swift_fn_free_a2aserver(handle, $0) }
+    }
+
+    
+    /**
+     * Opens the server over `host`, binds `address` and starts serving.
+     * Without an authenticator, only a loopback address is allowed.
+     */
+public static func serve(options: A2aServeOptions, host: A2aTaskHost, authenticator: A2aAuthenticator? = nil)async throws  -> A2aServer  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_constructor_a2aserver_serve(FfiConverterTypeA2aServeOptions_lower(options),FfiConverterTypeA2aTaskHost_lower(host),FfiConverterOptionTypeA2aAuthenticator.lower(authenticator)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_u64,
+            completeFunc: ffi_basis_swift_rust_future_complete_u64,
+            freeFunc: ffi_basis_swift_rust_future_free_u64,
+            liftFunc: FfiConverterTypeA2aServer_lift,
+            errorHandler: FfiConverterTypeBasisError_lift
+        )
+}
+    
+
+    
+    /**
+     * The JSON-RPC endpoint the card advertises.
+     */
+open func endpoint() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_basis_swift_fn_method_a2aserver_endpoint(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The port actually bound.
+     */
+open func port() -> UInt16  {
+    return try!  FfiConverterUInt16.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_basis_swift_fn_method_a2aserver_port(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Stops accepting, lets in-flight requests finish, and leaves every
+     * unsettled task to be awaited again by the next server.
+     */
+open func shutdown()async   {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2aserver_shutdown(
+                        self.uniffiCloneHandle()
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_void,
+            completeFunc: ffi_basis_swift_rust_future_complete_void,
+            freeFunc: ffi_basis_swift_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: nil
+            
+        )
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aServer: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = A2aServer
+
+    public static func lift(_ handle: UInt64) throws -> A2aServer {
+        return A2aServer(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: A2aServer) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aServer {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: A2aServer, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aServer_lift(_ handle: UInt64) throws -> A2aServer {
+    return try FfiConverterTypeA2aServer.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aServer_lower(_ value: A2aServer) -> UInt64 {
+    return FfiConverterTypeA2aServer.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The tasks a server serves, run by the host (basis-a2a's `TaskHost`).
+ */
+public protocol A2aTaskHost: AnyObject, Sendable {
+    
+    /**
+     * Begins the work and returns the host's own id for it.
+     */
+    func start(start: A2aHostedStart) async throws  -> String
+    
+    func standing(id: String) async throws  -> A2aHostedStanding
+    
+    func cancel(id: String) async throws 
+    
+    /**
+     * Returns once the task has settled; a task asking its caller has not.
+     */
+    func settled(id: String) async throws 
+    
+    /**
+     * Hands a task paused on a question its caller's reply.
+     */
+    func reply(id: String, reply: A2aHostedReply) async throws 
+    
+    /**
+     * The artifacts the task has produced so far, served after `result`.
+     */
+    func artifacts(id: String) async throws  -> [A2aArtifact]
+    
+    /**
+     * The first note after `cursor` — after now, when `cursor` is `nil` —
+     * waiting for one; `nil` once the task has settled or has nothing more
+     * to say. A thrown error ends the notes, never the task.
+     */
+    func progress(id: String, cursor: UInt64?) async throws  -> A2aProgressNote?
+    
+}
+/**
+ * The tasks a server serves, run by the host (basis-a2a's `TaskHost`).
+ */
+open class A2aTaskHostImpl: A2aTaskHost, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_basis_swift_fn_clone_a2ataskhost(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_basis_swift_fn_free_a2ataskhost(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Begins the work and returns the host's own id for it.
+     */
+open func start(start: A2aHostedStart)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_start(
+                        self.uniffiCloneHandle(),FfiConverterTypeA2aHostedStart_lower(start)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_rust_buffer,
+            completeFunc: ffi_basis_swift_rust_future_complete_rust_buffer,
+            freeFunc: ffi_basis_swift_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+open func standing(id: String)async throws  -> A2aHostedStanding  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_standing(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_rust_buffer,
+            completeFunc: ffi_basis_swift_rust_future_complete_rust_buffer,
+            freeFunc: ffi_basis_swift_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeA2aHostedStanding_lift,
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+open func cancel(id: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_cancel(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_void,
+            completeFunc: ffi_basis_swift_rust_future_complete_void,
+            freeFunc: ffi_basis_swift_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+    /**
+     * Returns once the task has settled; a task asking its caller has not.
+     */
+open func settled(id: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_settled(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_void,
+            completeFunc: ffi_basis_swift_rust_future_complete_void,
+            freeFunc: ffi_basis_swift_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+    /**
+     * Hands a task paused on a question its caller's reply.
+     */
+open func reply(id: String, reply: A2aHostedReply)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_reply(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id),FfiConverterTypeA2aHostedReply_lower(reply)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_void,
+            completeFunc: ffi_basis_swift_rust_future_complete_void,
+            freeFunc: ffi_basis_swift_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+    /**
+     * The artifacts the task has produced so far, served after `result`.
+     */
+open func artifacts(id: String)async throws  -> [A2aArtifact]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_artifacts(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_rust_buffer,
+            completeFunc: ffi_basis_swift_rust_future_complete_rust_buffer,
+            freeFunc: ffi_basis_swift_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeA2aArtifact.lift,
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+    /**
+     * The first note after `cursor` — after now, when `cursor` is `nil` —
+     * waiting for one; `nil` once the task has settled or has nothing more
+     * to say. A thrown error ends the notes, never the task.
+     */
+open func progress(id: String, cursor: UInt64?)async throws  -> A2aProgressNote?  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_basis_swift_fn_method_a2ataskhost_progress(
+                        self.uniffiCloneHandle(),FfiConverterString.lower(id),FfiConverterOptionUInt64.lower(cursor)
+                )
+            },
+            pollFunc: ffi_basis_swift_rust_future_poll_rust_buffer,
+            completeFunc: ffi_basis_swift_rust_future_complete_rust_buffer,
+            freeFunc: ffi_basis_swift_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeA2aProgressNote.lift,
+            errorHandler: FfiConverterTypeA2aHostError_lift
+        )
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceA2aTaskHost {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceA2aTaskHost = UniffiVTableCallbackInterfaceA2aTaskHost(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeA2aTaskHost.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface A2aTaskHost: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeA2aTaskHost.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface A2aTaskHost: handle missing in uniffiClone")
+            }
+        },
+        start: { (
+            uniffiHandle: UInt64,
+            start: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.start(
+                     start: try FfiConverterTypeA2aHostedStart_lift(start)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: String) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterString.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        standing: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> A2aHostedStanding in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.standing(
+                     id: try FfiConverterString.lift(id)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: A2aHostedStanding) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterTypeA2aHostedStanding_lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        cancel: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteVoid,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.cancel(
+                     id: try FfiConverterString.lift(id)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: ()) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        settled: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteVoid,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.settled(
+                     id: try FfiConverterString.lift(id)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: ()) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        reply: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            reply: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteVoid,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.reply(
+                     id: try FfiConverterString.lift(id),
+                     reply: try FfiConverterTypeA2aHostedReply_lift(reply)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: ()) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultVoid(
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        artifacts: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> [A2aArtifact] in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.artifacts(
+                     id: try FfiConverterString.lift(id)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: [A2aArtifact]) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterSequenceTypeA2aArtifact.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        progress: { (
+            uniffiHandle: UInt64,
+            id: RustBuffer,
+            cursor: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> A2aProgressNote? in
+                guard let uniffiObj = try? FfiConverterTypeA2aTaskHost.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.progress(
+                     id: try FfiConverterString.lift(id),
+                     cursor: try FfiConverterOptionUInt64.lift(cursor)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: A2aProgressNote?) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterOptionTypeA2aProgressNote.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeA2aHostError_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceA2aTaskHost> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceA2aTaskHost>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitA2aTaskHost() {
+    uniffi_basis_swift_fn_init_callback_vtable_a2ataskhost(UniffiCallbackInterfaceA2aTaskHost.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aTaskHost: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<A2aTaskHost>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = A2aTaskHost
+
+    public static func lift(_ handle: UInt64) throws -> A2aTaskHost {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return A2aTaskHostImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: A2aTaskHost) -> UInt64 {
+         if let rustImpl = value as? A2aTaskHostImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aTaskHost {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: A2aTaskHost, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aTaskHost_lift(_ handle: UInt64) throws -> A2aTaskHost {
+    return try FfiConverterTypeA2aTaskHost.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aTaskHost_lower(_ value: A2aTaskHost) -> UInt64 {
+    return FfiConverterTypeA2aTaskHost.lower(value)
+}
+
+
 
 
 
@@ -1840,6 +2969,834 @@ public func FfiConverterTypeWorkspace_lower(_ value: Workspace) -> UInt64 {
 
 
 
+public struct A2aArtifact: Equatable, Hashable {
+    /**
+     * Unique within the task; `result` is the server's own.
+     */
+    public var artifactId: String
+    public var name: String?
+    public var description: String?
+    /**
+     * At least one.
+     */
+    public var parts: [A2aPart]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Unique within the task; `result` is the server's own.
+         */artifactId: String, name: String? = nil, description: String? = nil, 
+        /**
+         * At least one.
+         */parts: [A2aPart]) {
+        self.artifactId = artifactId
+        self.name = name
+        self.description = description
+        self.parts = parts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aArtifact: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aArtifact: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aArtifact {
+        return
+            try A2aArtifact(
+                artifactId: FfiConverterString.read(from: &buf), 
+                name: FfiConverterOptionString.read(from: &buf), 
+                description: FfiConverterOptionString.read(from: &buf), 
+                parts: FfiConverterSequenceTypeA2aPart.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aArtifact, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.artifactId, into: &buf)
+        FfiConverterOptionString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.description, into: &buf)
+        FfiConverterSequenceTypeA2aPart.write(value.parts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aArtifact_lift(_ buf: RustBuffer) throws -> A2aArtifact {
+    return try FfiConverterTypeA2aArtifact.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aArtifact_lower(_ value: A2aArtifact) -> RustBuffer {
+    return FfiConverterTypeA2aArtifact.lower(value)
+}
+
+
+public struct A2aHeader: Equatable, Hashable {
+    public var name: String
+    /**
+     * Lossy for bytes that are not UTF-8.
+     */
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, 
+        /**
+         * Lossy for bytes that are not UTF-8.
+         */value: String) {
+        self.name = name
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aHeader: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aHeader: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aHeader {
+        return
+            try A2aHeader(
+                name: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aHeader, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHeader_lift(_ buf: RustBuffer) throws -> A2aHeader {
+    return try FfiConverterTypeA2aHeader.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHeader_lower(_ value: A2aHeader) -> RustBuffer {
+    return FfiConverterTypeA2aHeader.lower(value)
+}
+
+
+/**
+ * A caller's reply to a task paused on a question.
+ */
+public struct A2aHostedReply: Equatable, Hashable {
+    public var messageId: String
+    public var text: String
+    public var parts: [A2aPart]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(messageId: String, text: String, parts: [A2aPart]) {
+        self.messageId = messageId
+        self.text = text
+        self.parts = parts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aHostedReply: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aHostedReply: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aHostedReply {
+        return
+            try A2aHostedReply(
+                messageId: FfiConverterString.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                parts: FfiConverterSequenceTypeA2aPart.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aHostedReply, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.messageId, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterSequenceTypeA2aPart.write(value.parts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedReply_lift(_ buf: RustBuffer) throws -> A2aHostedReply {
+    return try FfiConverterTypeA2aHostedReply.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedReply_lower(_ value: A2aHostedReply) -> RustBuffer {
+    return FfiConverterTypeA2aHostedReply.lower(value)
+}
+
+
+/**
+ * What a message asks the host to start.
+ */
+public struct A2aHostedStart: Equatable, Hashable {
+    /**
+     * The A2A id callers see; the host may key its task by it.
+     */
+    public var taskId: String
+    public var principal: String
+    /**
+     * What the authenticator vouched for, beside the name. The caller cannot
+     * write it.
+     */
+    public var attributes: [String: String]
+    public var contextId: String
+    /**
+     * The host's id for the latest task in this context, for a follow-up.
+     */
+    public var continues: String?
+    /**
+     * The message rendered as one prompt.
+     */
+    public var prompt: String
+    public var parts: [A2aPart]
+    /**
+     * The message's `metadata`, as JSON; `{}` when it had none.
+     */
+    public var metadataJson: String
+    /**
+     * The request's own `metadata`, as JSON.
+     */
+    public var requestMetadataJson: String
+    public var extensions: [String]
+    public var hop: UInt32
+    /**
+     * When the task must have settled by, in milliseconds since the epoch.
+     */
+    public var deadlineMs: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The A2A id callers see; the host may key its task by it.
+         */taskId: String, principal: String, 
+        /**
+         * What the authenticator vouched for, beside the name. The caller cannot
+         * write it.
+         */attributes: [String: String], contextId: String, 
+        /**
+         * The host's id for the latest task in this context, for a follow-up.
+         */continues: String?, 
+        /**
+         * The message rendered as one prompt.
+         */prompt: String, parts: [A2aPart], 
+        /**
+         * The message's `metadata`, as JSON; `{}` when it had none.
+         */metadataJson: String, 
+        /**
+         * The request's own `metadata`, as JSON.
+         */requestMetadataJson: String, extensions: [String], hop: UInt32, 
+        /**
+         * When the task must have settled by, in milliseconds since the epoch.
+         */deadlineMs: UInt64) {
+        self.taskId = taskId
+        self.principal = principal
+        self.attributes = attributes
+        self.contextId = contextId
+        self.continues = continues
+        self.prompt = prompt
+        self.parts = parts
+        self.metadataJson = metadataJson
+        self.requestMetadataJson = requestMetadataJson
+        self.extensions = extensions
+        self.hop = hop
+        self.deadlineMs = deadlineMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aHostedStart: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aHostedStart: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aHostedStart {
+        return
+            try A2aHostedStart(
+                taskId: FfiConverterString.read(from: &buf), 
+                principal: FfiConverterString.read(from: &buf), 
+                attributes: FfiConverterDictionaryStringString.read(from: &buf), 
+                contextId: FfiConverterString.read(from: &buf), 
+                continues: FfiConverterOptionString.read(from: &buf), 
+                prompt: FfiConverterString.read(from: &buf), 
+                parts: FfiConverterSequenceTypeA2aPart.read(from: &buf), 
+                metadataJson: FfiConverterString.read(from: &buf), 
+                requestMetadataJson: FfiConverterString.read(from: &buf), 
+                extensions: FfiConverterSequenceString.read(from: &buf), 
+                hop: FfiConverterUInt32.read(from: &buf), 
+                deadlineMs: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aHostedStart, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.principal, into: &buf)
+        FfiConverterDictionaryStringString.write(value.attributes, into: &buf)
+        FfiConverterString.write(value.contextId, into: &buf)
+        FfiConverterOptionString.write(value.continues, into: &buf)
+        FfiConverterString.write(value.prompt, into: &buf)
+        FfiConverterSequenceTypeA2aPart.write(value.parts, into: &buf)
+        FfiConverterString.write(value.metadataJson, into: &buf)
+        FfiConverterString.write(value.requestMetadataJson, into: &buf)
+        FfiConverterSequenceString.write(value.extensions, into: &buf)
+        FfiConverterUInt32.write(value.hop, into: &buf)
+        FfiConverterUInt64.write(value.deadlineMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedStart_lift(_ buf: RustBuffer) throws -> A2aHostedStart {
+    return try FfiConverterTypeA2aHostedStart.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedStart_lower(_ value: A2aHostedStart) -> RustBuffer {
+    return FfiConverterTypeA2aHostedStart.lower(value)
+}
+
+
+public struct A2aPart: Equatable, Hashable {
+    public var content: A2aPartContent
+    public var filename: String?
+    public var mediaType: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(content: A2aPartContent, filename: String? = nil, mediaType: String? = nil) {
+        self.content = content
+        self.filename = filename
+        self.mediaType = mediaType
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aPart: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aPart: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aPart {
+        return
+            try A2aPart(
+                content: FfiConverterTypeA2aPartContent.read(from: &buf), 
+                filename: FfiConverterOptionString.read(from: &buf), 
+                mediaType: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aPart, into buf: inout [UInt8]) {
+        FfiConverterTypeA2aPartContent.write(value.content, into: &buf)
+        FfiConverterOptionString.write(value.filename, into: &buf)
+        FfiConverterOptionString.write(value.mediaType, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPart_lift(_ buf: RustBuffer) throws -> A2aPart {
+    return try FfiConverterTypeA2aPart.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPart_lower(_ value: A2aPart) -> RustBuffer {
+    return FfiConverterTypeA2aPart.lower(value)
+}
+
+
+/**
+ * Who a request is from.
+ */
+public struct A2aPrincipal: Equatable, Hashable {
+    /**
+     * 1–64 ASCII letters, digits, `-`, `_`, `.` or `:`. Tasks are owned by it.
+     */
+    public var name: String
+    /**
+     * What the authenticator verified about this request, handed to the host.
+     */
+    public var attributes: [String: String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * 1–64 ASCII letters, digits, `-`, `_`, `.` or `:`. Tasks are owned by it.
+         */name: String, 
+        /**
+         * What the authenticator verified about this request, handed to the host.
+         */attributes: [String: String]) {
+        self.name = name
+        self.attributes = attributes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aPrincipal: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aPrincipal: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aPrincipal {
+        return
+            try A2aPrincipal(
+                name: FfiConverterString.read(from: &buf), 
+                attributes: FfiConverterDictionaryStringString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aPrincipal, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterDictionaryStringString.write(value.attributes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPrincipal_lift(_ buf: RustBuffer) throws -> A2aPrincipal {
+    return try FfiConverterTypeA2aPrincipal.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPrincipal_lower(_ value: A2aPrincipal) -> RustBuffer {
+    return FfiConverterTypeA2aPrincipal.lower(value)
+}
+
+
+/**
+ * One progress note, and the cursor that follows it.
+ */
+public struct A2aProgressNote: Equatable, Hashable {
+    public var cursor: UInt64
+    public var note: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(cursor: UInt64, note: String) {
+        self.cursor = cursor
+        self.note = note
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aProgressNote: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aProgressNote: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aProgressNote {
+        return
+            try A2aProgressNote(
+                cursor: FfiConverterUInt64.read(from: &buf), 
+                note: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aProgressNote, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.cursor, into: &buf)
+        FfiConverterString.write(value.note, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aProgressNote_lift(_ buf: RustBuffer) throws -> A2aProgressNote {
+    return try FfiConverterTypeA2aProgressNote.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aProgressNote_lower(_ value: A2aProgressNote) -> RustBuffer {
+    return FfiConverterTypeA2aProgressNote.lower(value)
+}
+
+
+/**
+ * What an authenticator is shown of a request: never its body.
+ */
+public struct A2aRequestHead: Equatable, Hashable {
+    public var method: String
+    public var uri: String
+    /**
+     * Every header, in order; a repeated name appears once per value.
+     */
+    public var headers: [A2aHeader]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(method: String, uri: String, 
+        /**
+         * Every header, in order; a repeated name appears once per value.
+         */headers: [A2aHeader]) {
+        self.method = method
+        self.uri = uri
+        self.headers = headers
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aRequestHead: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aRequestHead: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aRequestHead {
+        return
+            try A2aRequestHead(
+                method: FfiConverterString.read(from: &buf), 
+                uri: FfiConverterString.read(from: &buf), 
+                headers: FfiConverterSequenceTypeA2aHeader.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aRequestHead, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.method, into: &buf)
+        FfiConverterString.write(value.uri, into: &buf)
+        FfiConverterSequenceTypeA2aHeader.write(value.headers, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aRequestHead_lift(_ buf: RustBuffer) throws -> A2aRequestHead {
+    return try FfiConverterTypeA2aRequestHead.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aRequestHead_lower(_ value: A2aRequestHead) -> RustBuffer {
+    return FfiConverterTypeA2aRequestHead.lower(value)
+}
+
+
+public struct A2aSecurity: Equatable, Hashable {
+    public var schemeName: String
+    public var scheme: A2aSecurityScheme
+    /**
+     * The `WWW-Authenticate` value of a `401`.
+     */
+    public var challenge: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(schemeName: String, scheme: A2aSecurityScheme, 
+        /**
+         * The `WWW-Authenticate` value of a `401`.
+         */challenge: String = "Bearer") {
+        self.schemeName = schemeName
+        self.scheme = scheme
+        self.challenge = challenge
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aSecurity: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aSecurity: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aSecurity {
+        return
+            try A2aSecurity(
+                schemeName: FfiConverterString.read(from: &buf), 
+                scheme: FfiConverterTypeA2aSecurityScheme.read(from: &buf), 
+                challenge: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aSecurity, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.schemeName, into: &buf)
+        FfiConverterTypeA2aSecurityScheme.write(value.scheme, into: &buf)
+        FfiConverterString.write(value.challenge, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSecurity_lift(_ buf: RustBuffer) throws -> A2aSecurity {
+    return try FfiConverterTypeA2aSecurity.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSecurity_lower(_ value: A2aSecurity) -> RustBuffer {
+    return FfiConverterTypeA2aSecurity.lower(value)
+}
+
+
+/**
+ * How a server is opened. Unset means basis-a2a's default.
+ */
+public struct A2aServeOptions: Equatable, Hashable {
+    public var name: String
+    public var description: String
+    public var version: String?
+    public var skills: [A2aSkill]
+    /**
+     * Where the server keeps its task index; the host's own state is its own.
+     */
+    public var stateDir: String
+    /**
+     * `host:port`; port 0 picks one.
+     */
+    public var address: String
+    /**
+     * The URL the card advertises, behind a proxy.
+     */
+    public var publicUrl: String?
+    public var taskDeadlineSeconds: UInt64?
+    public var liveTaskQuota: UInt32?
+    public var streamCap: UInt32?
+    public var hopCap: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, description: String, version: String? = nil, skills: [A2aSkill] = [], 
+        /**
+         * Where the server keeps its task index; the host's own state is its own.
+         */stateDir: String, 
+        /**
+         * `host:port`; port 0 picks one.
+         */address: String, 
+        /**
+         * The URL the card advertises, behind a proxy.
+         */publicUrl: String? = nil, taskDeadlineSeconds: UInt64? = nil, liveTaskQuota: UInt32? = nil, streamCap: UInt32? = nil, hopCap: UInt32? = nil) {
+        self.name = name
+        self.description = description
+        self.version = version
+        self.skills = skills
+        self.stateDir = stateDir
+        self.address = address
+        self.publicUrl = publicUrl
+        self.taskDeadlineSeconds = taskDeadlineSeconds
+        self.liveTaskQuota = liveTaskQuota
+        self.streamCap = streamCap
+        self.hopCap = hopCap
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aServeOptions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aServeOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aServeOptions {
+        return
+            try A2aServeOptions(
+                name: FfiConverterString.read(from: &buf), 
+                description: FfiConverterString.read(from: &buf), 
+                version: FfiConverterOptionString.read(from: &buf), 
+                skills: FfiConverterSequenceTypeA2aSkill.read(from: &buf), 
+                stateDir: FfiConverterString.read(from: &buf), 
+                address: FfiConverterString.read(from: &buf), 
+                publicUrl: FfiConverterOptionString.read(from: &buf), 
+                taskDeadlineSeconds: FfiConverterOptionUInt64.read(from: &buf), 
+                liveTaskQuota: FfiConverterOptionUInt32.read(from: &buf), 
+                streamCap: FfiConverterOptionUInt32.read(from: &buf), 
+                hopCap: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aServeOptions, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.description, into: &buf)
+        FfiConverterOptionString.write(value.version, into: &buf)
+        FfiConverterSequenceTypeA2aSkill.write(value.skills, into: &buf)
+        FfiConverterString.write(value.stateDir, into: &buf)
+        FfiConverterString.write(value.address, into: &buf)
+        FfiConverterOptionString.write(value.publicUrl, into: &buf)
+        FfiConverterOptionUInt64.write(value.taskDeadlineSeconds, into: &buf)
+        FfiConverterOptionUInt32.write(value.liveTaskQuota, into: &buf)
+        FfiConverterOptionUInt32.write(value.streamCap, into: &buf)
+        FfiConverterOptionUInt32.write(value.hopCap, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aServeOptions_lift(_ buf: RustBuffer) throws -> A2aServeOptions {
+    return try FfiConverterTypeA2aServeOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aServeOptions_lower(_ value: A2aServeOptions) -> RustBuffer {
+    return FfiConverterTypeA2aServeOptions.lower(value)
+}
+
+
+public struct A2aSkill: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var description: String
+    public var tags: [String]
+    public var examples: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, description: String, tags: [String] = [], examples: [String] = []) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.tags = tags
+        self.examples = examples
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension A2aSkill: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aSkill: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aSkill {
+        return
+            try A2aSkill(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                description: FfiConverterString.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                examples: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: A2aSkill, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.description, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterSequenceString.write(value.examples, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSkill_lift(_ buf: RustBuffer) throws -> A2aSkill {
+    return try FfiConverterTypeA2aSkill.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSkill_lower(_ value: A2aSkill) -> RustBuffer {
+    return FfiConverterTypeA2aSkill.lower(value)
+}
+
+
 /**
  * The decision, and — when it refuses — the words the model reads.
  */
@@ -2661,6 +4618,488 @@ public func FfiConverterTypeWorkspaceOptions_lift(_ buf: RustBuffer) throws -> W
 public func FfiConverterTypeWorkspaceOptions_lower(_ value: WorkspaceOptions) -> RustBuffer {
     return FfiConverterTypeWorkspaceOptions.lower(value)
 }
+
+
+/**
+ * Why a host refused or failed: whose fault it is.
+ */
+public 
+enum A2aHostError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    /**
+     * The context is still working on an earlier message.
+     */
+    case Busy(message: String
+    )
+    /**
+     * The caller's to fix; told to it as invalid params.
+     */
+    case Refused(message: String
+    )
+    /**
+     * The host's own failure; the caller is told only that the server failed.
+     */
+    case Internal(message: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension A2aHostError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aHostError: FfiConverterRustBuffer {
+    typealias SwiftType = A2aHostError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aHostError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Busy(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .Refused(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .Internal(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: A2aHostError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Busy(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .Refused(message):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .Internal(message):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostError_lift(_ buf: RustBuffer) throws -> A2aHostError {
+    return try FfiConverterTypeA2aHostError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostError_lower(_ value: A2aHostError) -> RustBuffer {
+    return FfiConverterTypeA2aHostError.lower(value)
+}
+
+
+/**
+ * Where a host's task stands.
+ */
+
+public enum A2aHostedStanding: Equatable, Hashable {
+    
+    case submitted
+    case working
+    /**
+     * Its parts become the `result` artifact; none means no result artifact.
+     */
+    case completed(parts: [A2aPart]
+    )
+    case failed(error: String
+    )
+    case canceled
+    /**
+     * Paused on a question to its caller; these parts are the question.
+     */
+    case inputRequired(parts: [A2aPart]
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension A2aHostedStanding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aHostedStanding: FfiConverterRustBuffer {
+    typealias SwiftType = A2aHostedStanding
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aHostedStanding {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .submitted
+        
+        case 2: return .working
+        
+        case 3: return .completed(parts: try FfiConverterSequenceTypeA2aPart.read(from: &buf)
+        )
+        
+        case 4: return .failed(error: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .canceled
+        
+        case 6: return .inputRequired(parts: try FfiConverterSequenceTypeA2aPart.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: A2aHostedStanding, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .submitted:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .working:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .completed(parts):
+            writeInt(&buf, Int32(3))
+            FfiConverterSequenceTypeA2aPart.write(parts, into: &buf)
+            
+        
+        case let .failed(error):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(error, into: &buf)
+            
+        
+        case .canceled:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .inputRequired(parts):
+            writeInt(&buf, Int32(6))
+            FfiConverterSequenceTypeA2aPart.write(parts, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedStanding_lift(_ buf: RustBuffer) throws -> A2aHostedStanding {
+    return try FfiConverterTypeA2aHostedStanding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aHostedStanding_lower(_ value: A2aHostedStanding) -> RustBuffer {
+    return FfiConverterTypeA2aHostedStanding.lower(value)
+}
+
+
+
+/**
+ * What one part of a message or artifact holds.
+ */
+
+public enum A2aPartContent: Equatable, Hashable {
+    
+    case text(text: String
+    )
+    /**
+     * Structured data, as JSON.
+     */
+    case data(json: String
+    )
+    case raw(bytes: Data
+    )
+    case url(url: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension A2aPartContent: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aPartContent: FfiConverterRustBuffer {
+    typealias SwiftType = A2aPartContent
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aPartContent {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .text(text: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .data(json: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .raw(bytes: try FfiConverterData.read(from: &buf)
+        )
+        
+        case 4: return .url(url: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: A2aPartContent, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .text(text):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(text, into: &buf)
+            
+        
+        case let .data(json):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(json, into: &buf)
+            
+        
+        case let .raw(bytes):
+            writeInt(&buf, Int32(3))
+            FfiConverterData.write(bytes, into: &buf)
+            
+        
+        case let .url(url):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(url, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPartContent_lift(_ buf: RustBuffer) throws -> A2aPartContent {
+    return try FfiConverterTypeA2aPartContent.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aPartContent_lower(_ value: A2aPartContent) -> RustBuffer {
+    return FfiConverterTypeA2aPartContent.lower(value)
+}
+
+
+
+/**
+ * Why a request was refused before its body was read.
+ */
+public 
+enum A2aRefusal: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    /**
+     * `401`. Also what an authenticator that could not be reached means.
+     */
+    case Unauthenticated
+    /**
+     * `403`.
+     */
+    case Forbidden
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension A2aRefusal: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aRefusal: FfiConverterRustBuffer {
+    typealias SwiftType = A2aRefusal
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aRefusal {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Unauthenticated
+        case 2: return .Forbidden
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: A2aRefusal, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .Unauthenticated:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .Forbidden:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aRefusal_lift(_ buf: RustBuffer) throws -> A2aRefusal {
+    return try FfiConverterTypeA2aRefusal.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aRefusal_lower(_ value: A2aRefusal) -> RustBuffer {
+    return FfiConverterTypeA2aRefusal.lower(value)
+}
+
+
+/**
+ * The scheme a card declares callers must present.
+ */
+
+public enum A2aSecurityScheme: Equatable, Hashable {
+    
+    case httpAuth(scheme: String, description: String?, bearerFormat: String?
+    )
+    case apiKey(location: String, name: String, description: String?
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension A2aSecurityScheme: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeA2aSecurityScheme: FfiConverterRustBuffer {
+    typealias SwiftType = A2aSecurityScheme
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> A2aSecurityScheme {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .httpAuth(scheme: try FfiConverterString.read(from: &buf), description: try FfiConverterOptionString.read(from: &buf), bearerFormat: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 2: return .apiKey(location: try FfiConverterString.read(from: &buf), name: try FfiConverterString.read(from: &buf), description: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: A2aSecurityScheme, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .httpAuth(scheme,description,bearerFormat):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(scheme, into: &buf)
+            FfiConverterOptionString.write(description, into: &buf)
+            FfiConverterOptionString.write(bearerFormat, into: &buf)
+            
+        
+        case let .apiKey(location,name,description):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(location, into: &buf)
+            FfiConverterString.write(name, into: &buf)
+            FfiConverterOptionString.write(description, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSecurityScheme_lift(_ buf: RustBuffer) throws -> A2aSecurityScheme {
+    return try FfiConverterTypeA2aSecurityScheme.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeA2aSecurityScheme_lower(_ value: A2aSecurityScheme) -> RustBuffer {
+    return FfiConverterTypeA2aSecurityScheme.lower(value)
+}
+
 
 
 
@@ -3620,6 +6059,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeA2aAuthenticator: FfiConverterRustBuffer {
+    typealias SwiftType = A2aAuthenticator?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeA2aAuthenticator.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeA2aAuthenticator.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeApprover: FfiConverterRustBuffer {
     typealias SwiftType = Approver?
 
@@ -3684,6 +6147,30 @@ fileprivate struct FfiConverterOptionTypeTurnControl: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeTurnControl.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeA2aProgressNote: FfiConverterRustBuffer {
+    typealias SwiftType = A2aProgressNote?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeA2aProgressNote.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeA2aProgressNote.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -3978,6 +6465,132 @@ fileprivate struct FfiConverterSequenceTypeHostTool: FfiConverterRustBuffer {
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeA2aArtifact: FfiConverterRustBuffer {
+    typealias SwiftType = [A2aArtifact]
+
+    public static func write(_ value: [A2aArtifact], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeA2aArtifact.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [A2aArtifact] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [A2aArtifact]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeA2aArtifact.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeA2aHeader: FfiConverterRustBuffer {
+    typealias SwiftType = [A2aHeader]
+
+    public static func write(_ value: [A2aHeader], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeA2aHeader.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [A2aHeader] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [A2aHeader]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeA2aHeader.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeA2aPart: FfiConverterRustBuffer {
+    typealias SwiftType = [A2aPart]
+
+    public static func write(_ value: [A2aPart], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeA2aPart.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [A2aPart] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [A2aPart]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeA2aPart.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeA2aSkill: FfiConverterRustBuffer {
+    typealias SwiftType = [A2aSkill]
+
+    public static func write(_ value: [A2aSkill], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeA2aSkill.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [A2aSkill] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [A2aSkill]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeA2aSkill.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
+    public static func write(_ value: [String: String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: String] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: String]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_WAKE: Int8 = 1
 
@@ -4132,6 +6745,42 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_basis_swift_checksum_method_a2aauthenticator_authenticate() != 63394) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2aauthenticator_security() != 21818) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2aserver_endpoint() != 32612) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2aserver_port() != 8178) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2aserver_shutdown() != 52294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_start() != 61259) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_standing() != 4810) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_cancel() != 61760) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_settled() != 31972) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_reply() != 59048) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_artifacts() != 34459) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2ataskhost_progress() != 49698) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_basis_swift_checksum_method_approver_approve() != 59528) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4168,6 +6817,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_basis_swift_checksum_method_workspace_resume() != 38690) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_basis_swift_checksum_constructor_a2aserver_serve() != 281) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_basis_swift_checksum_constructor_turncontrol_new() != 47553) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4175,6 +6827,8 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
 
+    uniffiCallbackInitA2aAuthenticator()
+    uniffiCallbackInitA2aTaskHost()
     uniffiCallbackInitApprover()
     uniffiCallbackInitEventObserver()
     uniffiCallbackInitHostTool()

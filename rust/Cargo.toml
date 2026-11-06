@@ -18,7 +18,10 @@ name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
 
 [dependencies]
-basis = { version = "=0.23.0", features = ["responses-websocket"] }
+# Local paths until basis 0.24 is released with basis-a2a's ADR-0048 seams.
+basis = { path = "../../basis/basis", features = ["responses-websocket"] }
+basis-a2a = { path = "../../basis/basis-a2a" }
+futures = "0.3"
 async-trait = "0.1"
 serde_json = "1"
 thiserror = "2"

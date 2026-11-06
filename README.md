@@ -90,6 +90,25 @@ let run = try workspace.prepare(options: ConversationOptions(effort: .high, resp
 try await run.send(prompt, limits: TurnLimits(toolBudget: 64, deadlineSeconds: 300))
 ```
 
+### Serving your own tasks over A2A
+
+`A2aServer` is basis-a2a's server over tasks your app runs. Implement `A2aTaskHost` (start,
+standing, cancel, settled, reply, artifacts, and progress pulled by cursor) and, for anything
+but loopback, an `A2aAuthenticator`. The server mints each task's id and hands it to `start`,
+serves both A2A bindings, the card, per-principal scoping and streams, and after a restart awaits
+unsettled tasks again rather than starting them. Attributes your authenticator returns reach
+`start` beside the principal's name.
+
+```swift
+let server = try await A2aServer.serve(
+    options: A2aServeOptions(name: "librarian", description: "Answers from its catalog.",
+                             stateDir: stateDir.path, address: "0.0.0.0:8080"),
+    host: Librarian(), authenticator: GatewayTokens()
+)
+// ...
+await server.shutdown()
+```
+
 ### Resuming
 
 `run.agentId()` names the conversation. `workspace.resume(agentId:)` picks it up later, from the
