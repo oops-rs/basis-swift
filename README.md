@@ -109,6 +109,19 @@ let server = try await A2aServer.serve(
 await server.shutdown()
 ```
 
+A host may persist and publish a new descriptive identity without restarting tasks:
+
+```swift
+try server.updateIdentity(name: "librarian", description: "Answers from an expanded catalog.",
+                          version: "2", skills: learnedSkills)
+```
+
+Subsequent public and extended cards see one consistent snapshot. Authentication,
+endpoints and protocol capabilities still come from the running service. The host
+owns authorization and persistence; no remote mutation method is added. Updating
+a stopped server fails. `shutdown()` releases its service state so the same state
+directory can be reopened while the old Swift object is still in scope.
+
 ### Resuming
 
 `run.agentId()` names the conversation. `workspace.resume(agentId:)` picks it up later, from the

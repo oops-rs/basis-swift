@@ -211,9 +211,9 @@ dependencies = [
 
 [[package]]
 name = "basis-a2a"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd730221dc480078e75d870e3d9973ae2b1773d8edb5165d0f39477570d7980d"
+checksum = "686f4ac51ad1ff08b3c747e5e72f154ecfa509955a19b1209010d397c970684d"
 dependencies = [
  "a2a-lf",
  "axum",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "basis-swift"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "basis",

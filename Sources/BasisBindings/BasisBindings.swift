@@ -903,6 +903,12 @@ public protocol A2aServerProtocol: AnyObject, Sendable {
      */
     func shutdown() async 
     
+    /**
+     * Replace descriptive card metadata without restarting this server.
+     * The host persists and authorizes it; protocol/authentication stay live facts.
+     */
+    func updateIdentity(name: String, description: String, version: String?, skills: [A2aSkill]) throws 
+    
 }
 /**
  * An A2A server, serving until [`shutdown`](Self::shutdown).
@@ -1022,6 +1028,22 @@ open func shutdown()async   {
             errorHandler: nil
             
         )
+}
+    
+    /**
+     * Replace descriptive card metadata without restarting this server.
+     * The host persists and authorizes it; protocol/authentication stay live facts.
+     */
+open func updateIdentity(name: String, description: String, version: String? = nil, skills: [A2aSkill] = [])throws   {try rustCallWithError(FfiConverterTypeBasisError_lift) {
+        uniffiCallStatus in
+    uniffi_basis_swift_fn_method_a2aserver_update_identity(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterString.lower(description),
+        FfiConverterOptionString.lower(version),
+        FfiConverterSequenceTypeA2aSkill.lower(skills),uniffiCallStatus
+    )
+}
 }
     
 
@@ -6758,6 +6780,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_basis_swift_checksum_method_a2aserver_shutdown() != 52294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_basis_swift_checksum_method_a2aserver_update_identity() != 2042) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_basis_swift_checksum_method_a2ataskhost_start() != 61259) {

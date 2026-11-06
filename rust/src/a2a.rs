@@ -293,6 +293,7 @@ pub struct A2aServeOptions {
 /// An A2A server, serving until [`shutdown`](Self::shutdown).
 #[derive(uniffi::Object)]
 pub struct A2aServer {
+    service: Mutex<Option<A2aService>>,
     endpoint: String,
     port: u16,
     stop: Mutex<Option<oneshot::Sender<()>>>,
@@ -318,7 +319,7 @@ impl A2aServer {
             })?;
             let config = config(&options, host, authenticator)?;
             let service = A2aService::open(config).map_err(run_error)?;
-            let server = basis_a2a::A2aServer::bind(address, service)
+            let server = basis_a2a::A2aServer::bind(address, service.clone())
                 .await
                 .map_err(run_error)?;
             let endpoint = server.endpoint().to_string();
@@ -333,6 +334,7 @@ impl A2aServer {
                 }
             });
             Ok(Arc::new(Self {
+                service: Mutex::new(Some(service)),
                 endpoint,
                 port,
                 stop: Mutex::new(Some(stop)),
@@ -340,6 +342,27 @@ impl A2aServer {
             }))
         })
         .await
+    }
+
+    /// Replace descriptive card metadata without restarting this server.
+    /// The host persists and authorizes it; protocol/authentication stay live facts.
+    #[uniffi::method(default(version = None, skills = []))]
+    pub fn update_identity(
+        &self,
+        name: String,
+        description: String,
+        version: Option<String>,
+        skills: Vec<A2aSkill>,
+    ) -> Result<(), BasisError> {
+        let service = self
+            .service
+            .lock()
+            .map_err(|_| run_error("A2A server state is unavailable"))?;
+        service
+            .as_ref()
+            .ok_or_else(|| run_error("A2A server has stopped"))?
+            .update_identity(identity(&name, &description, version.as_deref(), &skills))
+            .map_err(run_error)
     }
 
     /// The JSON-RPC endpoint the card advertises.
@@ -367,6 +390,9 @@ impl A2aServer {
         if let Some(serving) = serving {
             let _ = serving.await;
         }
+        if let Ok(mut service) = self.service.lock() {
+            service.take();
+        }
     }
 }
 
@@ -380,16 +406,17 @@ fn run_error(error: impl std::fmt::Display) -> BasisError {
     }
 }
 
-fn config(
-    options: &A2aServeOptions,
-    host: Arc<dyn A2aTaskHost>,
-    authenticator: Option<Arc<dyn A2aAuthenticator>>,
-) -> Result<ServeConfig, BasisError> {
-    let mut identity = AgentIdentity::new(&options.name, &options.description);
-    if let Some(version) = &options.version {
+fn identity(
+    name: &str,
+    description: &str,
+    version: Option<&str>,
+    skills: &[A2aSkill],
+) -> AgentIdentity {
+    let mut identity = AgentIdentity::new(name, description);
+    if let Some(version) = version {
         identity = identity.with_version(version);
     }
-    for skill in &options.skills {
+    for skill in skills {
         identity = identity.with_skill(AgentSkill {
             id: skill.id.clone(),
             name: skill.name.clone(),
@@ -401,6 +428,20 @@ fn config(
             security_requirements: None,
         });
     }
+    identity
+}
+
+fn config(
+    options: &A2aServeOptions,
+    host: Arc<dyn A2aTaskHost>,
+    authenticator: Option<Arc<dyn A2aAuthenticator>>,
+) -> Result<ServeConfig, BasisError> {
+    let identity = identity(
+        &options.name,
+        &options.description,
+        options.version.as_deref(),
+        &options.skills,
+    );
     let host: Arc<dyn TaskHost> = Arc::new(ForeignHost(host));
     let mut config = ServeConfig::hosted(identity, PathBuf::from(&options.state_dir), host);
     if let Some(authenticator) = authenticator {

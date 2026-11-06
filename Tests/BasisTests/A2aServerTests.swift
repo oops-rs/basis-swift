@@ -13,7 +13,7 @@ func aSwiftHostServesItsTasksOverA2a() async throws {
     let server = try await A2aServer.serve(
         options: A2aServeOptions(
             name: "swift-host", description: "Answers in tests.", version: "9.9.9",
-            stateDir: state.path, address: "127.0.0.1:0"
+            stateDir: state.path, address: "127.0.0.1:0", taskDeadlineSeconds: 3600
         ),
         host: host,
         authenticator: ChainAuthenticator()
@@ -24,6 +24,14 @@ func aSwiftHostServesItsTasksOverA2a() async throws {
     let card = try await getJSON(endpoint.appendingPathComponent(".well-known/agent-card.json"))
     #expect(card["name"] as? String == "swift-host")
     #expect(card["version"] as? String == "9.9.9")
+    try server.updateIdentity(name: "learned-host", description: "Learned a new workflow.", version: "10")
+    let updated = try await getJSON(endpoint.appendingPathComponent(".well-known/agent-card.json"))
+    #expect(updated["name"] as? String == "learned-host")
+    #expect(updated["description"] as? String == "Learned a new workflow.")
+    #expect(updated["version"] as? String == "10")
+    #expect((updated["capabilities"] as? NSDictionary) == (card["capabilities"] as? NSDictionary))
+    #expect((updated["securitySchemes"] as? NSDictionary) == (card["securitySchemes"] as? NSDictionary))
+
 
     var request = URLRequest(url: endpoint)
     request.httpMethod = "POST"
@@ -51,10 +59,20 @@ func aSwiftHostServesItsTasksOverA2a() async throws {
     #expect(start.principal == "alice")
     #expect(start.attributes == ["chain": "gateway>alice"])
     #expect(start.prompt == "hello")
+    #expect(start.deadlineMs > UInt64(Date().timeIntervalSince1970 * 1000) + 3_590_000)
 
     request.setValue(nil, forHTTPHeaderField: "Authorization")
     let (_, refused) = try await URLSession.shared.data(for: request)
     #expect((refused as? HTTPURLResponse)?.statusCode == 401)
+    await server.shutdown()
+    #expect(throws: (any Error).self) {
+        try server.updateIdentity(name: "closed", description: "Must not update a stopped server")
+    }
+    let restarted = try await A2aServer.serve(options: A2aServeOptions(
+        name: "reopened", description: "Same state directory", stateDir: state.path, address: "127.0.0.1:0"),
+        host: AnsweringHost(), authenticator: ChainAuthenticator())
+    await restarted.shutdown()
+
 }
 
 private func getJSON(_ url: URL) async throws -> [String: Any] {

@@ -5,8 +5,8 @@ import PackageDescription
 // target at its zip; `scripts/release.sh` rewrites these two lines. Unset, or
 // with BASIS_SWIFT_LOCAL_FFI set, the package builds against the one
 // `scripts/build-xcframework.sh` left in build/.
-let ffiURL = "https://github.com/oops-rs/basis-swift/releases/download/0.2.0/BasisFFI.xcframework.zip"
-let ffiChecksum = "271c90a82f66902ce0b3ac62832f7f014e8868fe0a249f1e6388551b9b41e4af"
+let ffiURL = "https://github.com/oops-rs/basis-swift/releases/download/0.2.1/BasisFFI.xcframework.zip"
+let ffiChecksum = "524aad194c841e33a23baa742bab17dda1743390f2e3c12980baadec5b2c439e"
 
 let useLocalFFI = ffiURL.isEmpty || Context.environment["BASIS_SWIFT_LOCAL_FFI"] != nil
 let ffi: Target = useLocalFFI
