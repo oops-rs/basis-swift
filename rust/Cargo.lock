@@ -195,7 +195,9 @@ dependencies = [
 
 [[package]]
 name = "basis"
-version = "0.23.0"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61fb8dc4b0348d4bea6ce4ef41f08e85e6f83fd8d34e0db2d151d6cfba3fcb29"
 dependencies = [
  "async-trait",
  "chrono",
@@ -209,7 +211,9 @@ dependencies = [
 
 [[package]]
 name = "basis-a2a"
-version = "0.23.0"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd730221dc480078e75d870e3d9973ae2b1773d8edb5165d0f39477570d7980d"
 dependencies = [
  "a2a-lf",
  "axum",
@@ -229,7 +233,9 @@ dependencies = [
 
 [[package]]
 name = "basis-host"
-version = "0.23.0"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fdcf6cc0573ff79d4afc7914c67876a5d99fabf45fadf2fe96d316e9ffa5e51a"
 dependencies = [
  "async-trait",
  "basis",
@@ -254,7 +260,9 @@ dependencies = [
 
 [[package]]
 name = "basis-tasks"
-version = "0.23.0"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "302c2374a4f79bf9a105476d7882bbc6f753ee7e61166d6ca5e9e1ffa73feeed"
 dependencies = [
  "basis",
  "basis-host",

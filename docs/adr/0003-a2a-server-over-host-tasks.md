@@ -26,8 +26,7 @@ A2A server in Swift.
 ## Consequences
 
 - The XCFramework links axum and basis-a2a's server.
-- `rust/Cargo.toml` takes basis and basis-a2a by local path until basis 0.24
-  ships ADR-0048; a release needs that first.
+- It requires basis 0.24, which ships ADR-0048.
 
 ## Ablation
 

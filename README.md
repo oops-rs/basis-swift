@@ -5,7 +5,7 @@ The harness runs in your app's process on macOS and iOS: no `basis` binary and n
 Your approver and your event view are ordinary Swift.
 
 ```swift
-.package(url: "https://github.com/oops-rs/basis-swift", from: "0.1.0")
+.package(url: "https://github.com/oops-rs/basis-swift", from: "0.2.0")
 ```
 
 Swift 6.4 or later; macOS 13, iOS 16.
